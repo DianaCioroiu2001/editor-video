@@ -16,21 +16,51 @@ BUNNY_LIBRARIES = {
         "id": "742487",  
         "api_key": "f4bf6266-4c1e-4904-bc517e5bfffd-4cbd-4220"
     },
-    # "Grupa 5A": "742487",
-    # "Grupa 6A": "742488",
-    # "Grupa 6B": "742489",
-    # "Grupa 7A": "742490",
-    # "Grupa 7B": "742491",
-    # "Grupa 7C": "742492",
-    # "Grupa 8A": "742494",
-    # "Grupa 8B": "742495",
-    # "Grupa 8C": "742497",
-    # "Grupa 8D": "742498",
-    # "Grupa 8E": "742498"
+    "Grupa 6A": {
+        "id": "742488",  
+        "api_key": "ec4378f9-d23a-402e-a5b35df204e4-2865-4965"
+    },
+    "Grupa 6B": {
+        "id": "742489",  
+        "api_key": "2b23056d-e56c-40ee-a51578894f2a-7254-4a95"
+    },
+    "Grupa 7A": {
+        "id": "742490",  
+        "api_key": "94340bcd-d87b-4264-b6a77e222d72-3ce9-41f9"
+    },
+      "Grupa 7B": {
+        "id": "742491",  
+        "api_key": "ffc95702-d037-4d3b-bf7fed9e8d41-6ec0-4fc3"
+    },
+   "Grupa 7C": {
+        "id": "742492",  
+        "api_key": "3d4049af-5081-47b0-ae9743ddaf3a-9515-47e7"
+    },
+     "Grupa 8A": {
+        "id": "742494",  
+        "api_key": "fce45f7b-1314-455d-9c86b59055b9-1015-4c1d"
+    },
+     "Grupa 8B": {
+        "id": "742495",  
+        "api_key": "70acc4cf-a8bd-4671-ae24ff3aab6b-cabd-4016"
+    },
+    "Grupa 8C": {
+        "id": "742497",  
+        "api_key": "182a827c-a9f9-45ed-a6564ebb1006-8652-4040"
+    },
+   "Grupa 8D": {
+        "id": "742498",  
+        "api_key": "46ff8552-ea81-44bb-81010a224b26-8896-4519"
+    },
+     "Grupa 8E": {
+        "id": "742499",  
+        "api_key": "adcb1098-5b02-4e7d-a78b1a06606c-073a-4354"
+    },
+ 
 }
 # Aici pui Capitolele din Cursuri și ID-ul lor real din Tutor LMS
 TOPICS = {
-    "Clasa V -> GRUPA 5A": 404,  # Înlocuiește 512 cu ID-ul real al topicului GRUPA 5A
+    "Clasa V -> GRUPA 5A": 404,  
     "Clasa V -> GRUPA 5B": 513
 }
 
