@@ -107,7 +107,7 @@ if st.button("🚀 Procesează și Publică", type="primary"):
 
                     # 2. Upload Bunny.net
                     library_id = BUNNY_LIBRARIES.get(library_name)
-                    create_url = f"https://video.bunny.net/library/{library_id}/videos"
+                    create_url = f"https://dash.bunny.net/stream/{library_id}/library/overview"
                     headers = {"AccessKey": BUNNY_API_KEY, "Content-Type": "application/json"}
                     
                     res = requests.post(create_url, json={"title": title}, headers=headers)
