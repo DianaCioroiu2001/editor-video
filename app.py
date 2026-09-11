@@ -77,6 +77,7 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                     output_path = "output_processed.mp4"
                     
                     # 1. FFmpeg Processing
+                    # 1. FFmpeg Processing (Fără pătrat negru / potrivire automată de rezoluție)
                     if bg_path:
                         cmd = [
                             'ffmpeg', '-y',
@@ -84,7 +85,10 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                             '-i', temp_video_path,
                             '-i', bg_path,
                             '-t', str(duration),
-                            '-filter_complex', '[1:v][0:v]overlay=(W-w)/2:(H-h)/2[out]',
+                            '-filter_complex', 
+                            '[1:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2[bg];'
+                            '[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080[fg];'
+                            '[bg][fg]overlay=0:0[out]',
                             '-map', '[out]', '-map', '0:a?',
                             '-c:v', 'libx264', '-crf', '28', '-preset', 'ultrafast',
                             '-threads', '2', '-c:a', 'aac',
