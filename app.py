@@ -59,12 +59,15 @@ BUNNY_LIBRARIES = {
  
 }
 # Aici pui Capitolele din Cursuri și ID-ul lor real din Tutor LMS
-TOPICS = {
-    "Clasa V -> GRUPA 5A": 404,  
-    "Clasa V -> GRUPA 5B": 513
+COURSES = {
+    "Matematică Clasa V -> GRUPA 5A": {"course_id": 404, "topic_name": "GRUPA 5A"},
+    "Matematică Clasa VI -> GRUPA 6A": {"course_id": 405, "topic_name": "GRUPA 6A"},
+    "Matematică Clasa VI -> GRUPA 6B": {"course_id": 405, "topic_name": "GRUPA 6B"},
+    "Matematică Clasa VI -> GRUPA 6C": {"course_id": 405, "topic_name": "GRUPA 6C"},
 }
 
-COURSE_ID = 404
+selected_option = st.selectbox("Alege Clasa și Grupa", list(COURSES.keys()))
+target_config = COURSES[selected_option]
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
