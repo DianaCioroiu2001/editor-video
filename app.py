@@ -53,9 +53,9 @@ st.title("🎓 Publisher Automat Lecții Curs")
 video_file = st.file_uploader("1. Încarcă Videoclipul Lecției", type=["mp4", "mov", "avi"])
 bg_image = st.file_uploader("2. Imagine Fundal (Opțional)", type=["jpg", "png", "jpeg"])
 
-lesson_title = st.text_input("3. Numele Lecției", value="Lecția nr.2 - Continuare")
+lesson_title = st.text_input("3. Numele Lecției", value="Lecția nr.2 - Recapitulare")
 
-selected_course_name = st.selectbox("4. Selectează Cursul / Clasa", list(COURSES.keys()))
+selected_topic_name = st.selectbox("4. Selectează Capitolul din Curs", list(TOPICS.keys()))
 library_name = st.selectbox("5. Selectează Biblioteca Bunny", list(BUNNY_LIBRARIES.keys()))
 
 start_time = st.text_input("Timp Început (ex: 00:02)", value="00:00")
@@ -90,7 +90,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                 else:
                     output_path = "output_processed.mp4"
                     
-                    # 1. FFmpeg Processing (Fără pătrat negru / potrivire perfectă)
+                    # 1. FFmpeg Processing
                     if bg_path:
                         cmd = [
                             'ffmpeg', '-y',
@@ -155,50 +155,37 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                         st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
                         st.stop()
 
-                    # 3. Creare Lecție în WordPress (Fallback inteligent pe endpoint-uri)
+                    # 3. Creare Lecție Nativă Tutor LMS
                     iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
                     
-                    course_id = COURSES.get(selected_course_name, 404)
+                    topic_id = TOPICS.get(selected_topic_name)
 
                     lesson_payload = {
                         "title": lesson_title,
                         "content": iframe_code,
                         "status": wp_status,
-                        "post_parent": course_id,
+                        "post_parent": topic_id,
+                        "menu_order": 2,
                         "meta": {
-                            "_tutor_course_id": course_id
+                            "_tutor_course_id": COURSE_ID
                         }
                     }
 
-                    # Lista de rute posibile pentru crearea lecțiilor în Tutor LMS / WordPress
-                    endpoints = [
-                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/lesson",
-                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/tutor_lessons",
-                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/tutor/v1/lessons",
-                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
-                    ]
+                    # Publicăm direct pe Custom Post Type-ul 'lesson'
+                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/lesson"
+                    
+                    wp_res = requests.post(
+                        wp_endpoint,
+                        json=lesson_payload,
+                        auth=(WP_USERNAME, WP_APP_PASSWORD)
+                    )
 
-                    wp_res = None
-                    last_error = ""
-
-                    for ep in endpoints:
-                        res_test = requests.post(
-                            ep,
-                            json=lesson_payload,
-                            auth=(WP_USERNAME, WP_APP_PASSWORD)
-                        )
-                        if res_test.status_code in [200, 201]:
-                            wp_res = res_test
-                            break
-                        else:
-                            last_error = f"{res_test.status_code}: {res_test.text}"
-
-                    if wp_res and wp_res.status_code in [200, 201]:
+                    if wp_res.status_code in [200, 201]:
                         post_link = wp_res.json().get("link")
-                        st.success(f"✅ Lecția '{lesson_title}' a fost creată cu succes!")
-                        st.markdown(f"🔗 **Vezi conținutul:** [{post_link}]({post_link})")
+                        st.success(f"✅ Lecția '{lesson_title}' a fost creată cu succes în Player-ul Cursului!")
+                        st.markdown(f"🔗 **Vezi noua lecție:** [{post_link}]({post_link})")
                     else:
-                        st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu WordPress a dat eroare: {last_error}")
+                        st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Tutor LMS a dat eroare ({wp_res.status_code}): {wp_res.text}")
 
                     # Curățare fișiere
                     for p in [temp_video_path, output_path, bg_path]:
