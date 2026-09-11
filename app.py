@@ -55,9 +55,9 @@ title = st.text_input("Titlu Video / Postare WordPress", value="Videoclip Nou")
 library_name = st.selectbox("3. Selectează Biblioteca Bunny", list(BUNNY_LIBRARIES.keys()))
 
 col1, col2 = st.columns(2)
-with col1:
+
 start_time = st.text_input("Timp Început (ex: 01:15 sau 75)", value="00:00")
-with col2:
+
 end_time = st.text_input("Timp Sfârșit (ex: 02:30 sau 150)", value="01:00")
 
 wp_status = st.radio("Status Postare WordPress", ["publish", "draft"], horizontal=True)
