@@ -31,6 +31,8 @@ TOPICS = {
     "Clasa V -> GRUPA 5A": 512,  # Înlocuiește 512 cu ID-ul real al topicului GRUPA 5A
     "Clasa V -> GRUPA 5B": 513
 }
+
+course_id = 404
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
