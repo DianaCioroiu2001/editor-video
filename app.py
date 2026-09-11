@@ -157,41 +157,62 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                         st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
                         st.stop()
 
-                # 3. Creare Lecție Nativă în Sidebar-ul Tutor LMS
+              # 3. Creare Lecție Nativă în Tutor LMS
                     iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
                     
                     topic_id = TOPICS.get(selected_topic_name)  # ID-ul capitolului GRUPA 5A
 
+                    # Payload compatibil cu Tutor LMS REST API
                     lesson_payload = {
+                        "topic_id": topic_id,
+                        "course_id": COURSE_ID,
+                        "lesson_title": lesson_title,
+                        "lesson_content": iframe_code,
+                        "post_parent": topic_id,
                         "title": lesson_title,
                         "content": iframe_code,
                         "status": wp_status,
-                        "post_parent": topic_id,
-                        "post_type": "topics",
-                        "menu_order": 2,
                         "meta": {
                             "_tutor_course_id": COURSE_ID
                         }
                     }
 
-                    # Publicăm direct pe ruta de posts pentru post_type = topics
-                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
-                    
-                    wp_res = requests.post(
-                        wp_endpoint,
-                        json=lesson_payload,
-                        auth=(WP_USERNAME, WP_APP_PASSWORD)
-                    )
+                    # Încercăm endpoint-urile native Tutor LMS & CPT
+                    endpoints = [
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/tutor/v1/lessons",
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/topics",
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/lesson"
+                    ]
 
-                    if wp_res.status_code in [200, 201]:
+                    wp_res = None
+                    last_err = ""
+
+                    for ep in endpoints:
+                        try:
+                            res_test = requests.post(
+                                ep,
+                                json=lesson_payload,
+                                auth=(WP_USERNAME, WP_APP_PASSWORD)
+                            )
+                            if res_test.status_code in [200, 201]:
+                                wp_res = res_test
+                                break
+                            else:
+                                last_err = f"{res_test.status_code}: {res_test.text}"
+                        except Exception as req_e:
+                            last_err = str(req_e)
+
+                    if wp_res and wp_res.status_code in [200, 201]:
                         res_data = wp_res.json()
-                        slug = res_data.get("slug", lesson_title.lower().replace(" ", "-"))
-                        expected_link = f"{WORDPRESS_URL.rstrip('/')}/courses/matematica-clasa-v/lessons/{slug}/"
+                        post_link = res_data.get("link")
+                        if not post_link:
+                            slug = res_data.get("slug", lesson_title.lower().replace(" ", "-"))
+                            post_link = f"{WORDPRESS_URL.rstrip('/')}/courses/matematica-clasa-v/lessons/{slug}/"
                         
-                        st.success(f"✅ Lecția '{lesson_title}' a fost adăugată în meniul din stânga!")
-                        st.markdown(f"🔗 **Deschide noua lecție în Curs:** [{expected_link}]({expected_link})")
+                        st.success(f"✅ Lecția '{lesson_title}' a fost creată cu succes!")
+                        st.markdown(f"🔗 **Deschide noua lecție în Curs:** [{post_link}]({post_link})")
                     else:
-                        st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Tutor LMS a dat eroare ({wp_res.status_code}): {wp_res.text}")
+                        st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Tutor LMS a dat eroare ({last_err})")
 # Curățare fișiere
                     for p in [temp_video_path, output_path, bg_path]:
                         if p and os.path.exists(p): os.remove(p)
