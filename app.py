@@ -10,17 +10,17 @@ BUNNY_LIBRARIES = {
         "id": "742487",  
         "api_key": "f4bf6266-4c1e-4904-bc517e5bfffd-4cbd-4220"
     },
-    "Grupa 5A": "742487",
-    "Grupa 6A": "742488",
-    "Grupa 6B": "742489",
-    "Grupa 7A": "742490",
-    "Grupa 7B": "742491",
-    "Grupa 7C": "742492",
-    "Grupa 8A": "742494",
-    "Grupa 8B": "742495",
-    "Grupa 8C": "742497",
-    "Grupa 8D": "742498",
-    "Grupa 8E": "742498"
+    # "Grupa 5A": "742487",
+    # "Grupa 6A": "742488",
+    # "Grupa 6B": "742489",
+    # "Grupa 7A": "742490",
+    # "Grupa 7B": "742491",
+    # "Grupa 7C": "742492",
+    # "Grupa 8A": "742494",
+    # "Grupa 8B": "742495",
+    # "Grupa 8C": "742497",
+    # "Grupa 8D": "742498",
+    # "Grupa 8E": "742498"
 }
 
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
