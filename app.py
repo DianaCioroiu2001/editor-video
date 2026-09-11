@@ -27,10 +27,9 @@ BUNNY_LIBRARIES = {
     # "Grupa 8E": "742498"
 }
 # Aici pui Capitolele din Cursuri și ID-ul lor real din Tutor LMS
-TOPICS = {
-    "Clasa a V-a -> GRUPA 5A": 404,      # Înlocuiește 245 cu ID-ul real al capitolului GRUPA 5A
-    "Clasa a V-a -> GRUPA 5B": 246,
-    "Clasa a VI-a -> Capitolul 1": 310
+COURSES = {
+    "Matematică Clasa a V-a": 404,
+    "Matematică Clasa a VI-a": 405
 }
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
