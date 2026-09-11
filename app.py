@@ -6,6 +6,10 @@ import requests
 BUNNY_API_KEY="f2ad32f2-ba5b-4e31-ae46-51782e8536d59644de27-9601-4147-b209-1c53c7259464"
 
 BUNNY_LIBRARIES = {
+    "Grupa 5A": {
+        "id": "742487",  
+        "api_key": "f4bf6266-4c1e-4904-bc517e5bfffd-4cbd-4220"
+    },
     "Grupa 5A": "742487",
     "Grupa 6A": "742488",
     "Grupa 6B": "742489",
@@ -103,10 +107,13 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                         st.stop()
 
                    # 2. Upload Bunny.net
-                    library_id = BUNNY_LIBRARIES.get(library_name)
+                   # 2. Upload Bunny.net
+                    selected_lib = BUNNY_LIBRARIES.get(library_name)
+                    library_id = selected_lib["id"]
+                    library_api_key = selected_lib["api_key"]
                     
                     headers = {
-                        "AccessKey": BUNNY_API_KEY,
+                        "AccessKey": library_api_key,
                         "Content-Type": "application/json",
                         "accept": "application/json"
                     }
@@ -124,7 +131,7 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                     # Pasul B: Încarcă fișierul MP4
                     upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
                     upload_headers = {
-                        "AccessKey": BUNNY_API_KEY,
+                        "AccessKey": library_api_key,
                         "Content-Type": "application/octet-stream"
                     }
                     
@@ -134,7 +141,6 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                     if up_res.status_code != 200:
                         st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
                         st.stop()
-
                     # 3. Publicare WordPress
                     iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
                     
