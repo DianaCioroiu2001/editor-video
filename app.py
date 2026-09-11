@@ -157,26 +157,24 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                         st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
                         st.stop()
 
-                    # 3. Legare directă de Capitolul din Curs (Tutor LMS)
+                    # 3. Creare și atașare directă la Cursul 404 (Tutor LMS)
                     iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
                     
-                    topic_id = TOPICS.get(selected_topic_name)
+                    # Targetăm direct ID-ul Cursului 404
+                    course_id = 404
 
                     lesson_payload = {
                         "title": lesson_title,
                         "content": iframe_code,
                         "status": wp_status,
-                        "post_parent": topic_id,
-                        "menu_order": 1,
+                        "post_parent": course_id,
+                        "menu_order": 2,
                         "meta": {
-                            "_tutor_course_id": topic_id
+                            "_tutor_course_id": course_id
                         }
                     }
                     
-                    # Trimitere ca 'topics' sau 'lesson' direct părinte capitolul
-                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
-                    lesson_payload["post_type"] = "topics"
-                    
+                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/topics"
                     wp_res = requests.post(
                         wp_endpoint,
                         json=lesson_payload,
