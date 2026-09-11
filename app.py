@@ -102,7 +102,7 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                         st.error(f"❌ Eroare FFmpeg: {res_cmd.stderr.decode('utf-8')[-500:]}")
                         st.stop()
 
-                    # 2. Upload Bunny.net
+                   # 2. Upload Bunny.net
                     library_id = BUNNY_LIBRARIES.get(library_name)
                     
                     headers = {
@@ -111,22 +111,18 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                         "accept": "application/json"
                     }
 
-                    # Încercăm mai întâi pe endpoint-ul Stream direct
+                    # Pasul A: Creare Video pe CDN
                     create_url = f"https://video.bunnycdn.com/library/{library_id}/videos"
                     res = requests.post(create_url, json={"title": title}, headers=headers)
-                    
-                    # Fallback pe API-ul global dacă e necesar
-                    if res.status_code in [404, 405]:
-                        create_url = f"https://api.bunny.net/videolibrary/{library_id}/videos"
-                        res = requests.post(create_url, json={"title": title}, headers=headers)
 
                     if res.status_code not in [200, 201]:
                         st.error(f"❌ Eroare la crearea clipului în Bunny ({res.status_code}): {res.text}")
                         st.stop()
 
                     video_id = res.json().get("guid")
-                    upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
                     
+                    # Pasul B: Încarcă fișierul MP4
+                    upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
                     upload_headers = {
                         "AccessKey": BUNNY_API_KEY,
                         "Content-Type": "application/octet-stream"
