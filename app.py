@@ -25,7 +25,7 @@ BUNNY_LIBRARIES = {
 
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
-WP_APP_PASSWORD = "Inginer@@01"
+WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
 
 def parse_sec(t):
     p = str(t).strip().split(':')
