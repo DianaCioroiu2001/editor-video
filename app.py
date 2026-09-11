@@ -27,17 +27,17 @@ WP_APP_PASSWORD = "Inginer@@01"
 # 2. FUNCȚIE PENTRU CALCULUL TIMPULUI
 # ==========================================
 def parse_time(time_str):
-parts = str(time_str).strip().split(':')
-try:
-if len(parts) == 1:
-return float(parts[0])
-elif len(parts) == 2:
-return float(parts[0]) * 60 + float(parts[1])
-elif len(parts) == 3:
-return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
-except ValueError:
-return 0
-return 0
+    parts = str(time_str).strip().split(':')
+    try:
+        if len(parts) == 1:
+            return float(parts[0])
+        elif len(parts) == 2:
+            return float(parts[0]) * 60 + float(parts[1])
+        elif len(parts) == 3:
+            return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+    except ValueError:
+        return 0
+    return 0
 
 # ==========================================
 # 3. INTERFAȚA WEB (STREAMLIT)
