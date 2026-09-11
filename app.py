@@ -9,7 +9,7 @@ import subprocess
 # CONFIGURARE BUNNY, WORDPRESS & CAPITOLE
 # ==========================================
 
-BUNNY_API_KEY="f2ad32f2-ba5b-4e31-ae46-51782e8536d59644de27-9601-4147-b209-1c53c7259464"
+BUNNY_STREAM_API_KEY="f2ad32f2-ba5b-4e31-ae46-51782e8536d59644de27-9601-4147-b209-1c53c7259464"
 
 BUNNY_LIBRARIES = {
     "Grupa 5A": {
