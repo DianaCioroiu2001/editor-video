@@ -52,6 +52,8 @@ st.write("Încarcă videoclipul, specifică intervalele de tăiat și creează a
 # ==========================================
 uploaded_file = st.file_uploader("Alege fișierul video (MP4, MOV, AVI)", type=["mp4", "mov", "avi"])
 
+selected_group = st.selectbox("Alege Grupa / Library-ul Bunny.net", list(BUNNY_LIBRARIES.keys()))
+
 lesson_title = st.text_input("Titlu Lecție", placeholder="Ex: Lecția nr. 2 - Recapitulare și Exerciții")
 
 st.markdown("---")
@@ -78,7 +80,6 @@ wp_status = st.selectbox("Status Lecție în WordPress", ["publish", "draft"], i
 # FUNCȚII AUXILIARE PENTRU TIMP ȘI FFmpeg
 # ==========================================
 def parse_time_to_seconds(time_str):
-    """Convertește HH:MM:SS sau MM:SS sau SS în secunde."""
     time_str = time_str.strip()
     parts = time_str.split(":")
     try:
@@ -93,7 +94,6 @@ def parse_time_to_seconds(time_str):
     return None
 
 def get_video_duration(file_path):
-    """Prelucrează durata totală a videoclipului folosind ffprobe."""
     cmd = [
         "ffprobe", "-v", "error", "-show_entries",
         "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", file_path
@@ -102,20 +102,14 @@ def get_video_duration(file_path):
     return float(result.stdout.strip())
 
 def parse_intervals(intervals_str, total_duration, start_cut, end_cut):
-    """
-    Calculează intervalele de PĂSTRAT (keep intervals) pe baza celor de șters.
-    """
     cuts = []
     
-    # Adăugăm tăierea de început dacă există
     if start_cut > 0:
         cuts.append((0, start_cut))
         
-    # Adăugăm tăierea de sfârșit dacă există
     if end_cut > 0 and (total_duration - end_cut) > start_cut:
         cuts.append((total_duration - end_cut, total_duration))
 
-    # Parse intervale intermediare
     if intervals_str.strip():
         raw_parts = intervals_str.split(",")
         for part in raw_parts:
@@ -126,7 +120,6 @@ def parse_intervals(intervals_str, total_duration, start_cut, end_cut):
                 if s_sec is not None and e_sec is not None and s_sec < e_sec:
                     cuts.append((s_sec, e_sec))
 
-    # Sortează și unește tăierile suprapuse
     cuts.sort(key=lambda x: x[0])
     merged_cuts = []
     for c in cuts:
@@ -139,7 +132,6 @@ def parse_intervals(intervals_str, total_duration, start_cut, end_cut):
             else:
                 merged_cuts.append(c)
 
-    # Calculăm bucățile de PĂSTRAT
     keep = []
     current_pos = 0.0
     for cut_s, cut_e in merged_cuts:
@@ -153,9 +145,7 @@ def parse_intervals(intervals_str, total_duration, start_cut, end_cut):
     return keep
 
 def process_video_ffmpeg(input_path, output_path, keep_intervals):
-    """Ghenerează comanda FFmpeg selectfilter/concat pentru a păstra doar bucățile valide."""
     if len(keep_intervals) == 1 and keep_intervals[0][0] == 0:
-        # Nu e nimic de tăiat, procesare directă
         cmd = ["ffmpeg", "-y", "-i", input_path, "-c", "copy", output_path]
         subprocess.run(cmd, check=True)
         return
@@ -190,6 +180,11 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
     elif not lesson_title.strip():
         st.error("Te rugăm să introduci titlul lecției!")
     else:
+        # Preluare credențiale specifice grupei alese
+        library_info = BUNNY_LIBRARIES[selected_group]
+        library_id = library_info["id"]
+        bunny_api_key = library_info["api_key"]
+
         with st.spinner("1/3 Se procesează și se taie videoclipul conform intervalelor..."):
             with tempfile.TemporaryDirectory() as temp_dir:
                 input_video_path = os.path.join(temp_dir, "input_video.mp4")
@@ -208,14 +203,14 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                     st.stop()
 
                 # 2. Upload Video pe Bunny Stream
-                st.spinner("2/3 Se încarcă video-ul pe Bunny.net...")
+                st.spinner(f"2/3 Se încarcă video-ul în librăria Bunny.net ({selected_group})...")
                 headers_bunny = {
-                    "AccessKey": BUNNY_STREAM_API_KEY,
+                    "AccessKey": bunny_api_key,
                     "Content-Type": "application/json"
                 }
 
                 # a. Creare ID Video pe Bunny
-                create_url = f"https://video.bunnycdn.com/library/{LIBRARY_ID}/videos"
+                create_url = f"https://video.bunnycdn.com/library/{library_id}/videos"
                 create_res = requests.post(create_url, json={"title": lesson_title}, headers=headers_bunny)
                 
                 if create_res.status_code not in [200, 201]:
@@ -225,12 +220,12 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                 video_id = create_res.json()["guid"]
 
                 # b. Upload fișier video procesat
-                upload_url = f"https://video.bunnycdn.com/library/{LIBRARY_ID}/videos/{video_id}"
+                upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
                 with open(output_video_path, "rb") as video_file:
                     upload_res = requests.put(
                         upload_url,
                         data=video_file,
-                        headers={"AccessKey": BUNNY_STREAM_API_KEY, "Content-Type": "application/octet-stream"}
+                        headers={"AccessKey": bunny_api_key, "Content-Type": "application/octet-stream"}
                     )
 
                 if upload_res.status_code not in [200, 201]:
@@ -239,7 +234,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
 
                 # 3. Creare Lecție în WordPress prin API-ul Custom
                 st.spinner("3/3 Se creează lecția în Tutor LMS...")
-                iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{LIBRARY_ID}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
+                iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
 
                 lesson_payload = {
                     "title": lesson_title,
@@ -258,7 +253,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                 if wp_res.status_code in [200, 201] and wp_res.json().get("success"):
                     res_data = wp_res.json()
                     post_link = res_data.get("link")
-                    st.success(f"✅ Lecția '{lesson_title}' a fost procesată și adăugată cu succes!")
+                    st.success(f"✅ Lecția '{lesson_title}' a fost adăugată cu succes!")
                     st.markdown(f"🔗 **Deschide noua lecție în Curs:** [{post_link}]({post_link})")
                 else:
                     st.error(f"⚠️ Eroare la asocierea cu WordPress ({wp_res.status_code}): {wp_res.text}")
