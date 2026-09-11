@@ -26,28 +26,6 @@ BUNNY_LIBRARIES = {
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
-import streamlit as st
-import os
-import subprocess
-import requests
-
-# ==========================================
-# CONFIGURARE BUNNY & WORDPRESS / TUTOR LMS
-# ==========================================
-BUNNY_LIBRARIES = {
-    "Grupa 5A": {
-        "id": "123456",
-        "api_key": "CHEIA_API_PENTRU_GRUPA_5A"
-    },
-    "Shorts & Reels": {
-        "id": "654321",
-        "api_key": "CHEIA_API_PENTRU_SHORTS"
-    }
-}
-
-WORDPRESS_URL = "https://www.levelup-dela0la10.ro"
-WP_USERNAME = "nume_utilizator_admin"
-WP_APP_PASSWORD = "xxxx xxxx xxxx xxxx"  # Parola de aplicație de 24 caractere
 
 # ==========================================
 # LOGICA APLICAȚIEI
