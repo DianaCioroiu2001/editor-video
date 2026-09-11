@@ -192,3 +192,5 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                         st.markdown(f"🔗 **Deschide noua lecție în Curs:** [{expected_link}]({expected_link})")
                     else:
                         st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Tutor LMS a dat eroare ({wp_res.status_code}): {wp_res.text}")
+except Exception as e:
+            st.error(f"❌ A apărut o eroare la procesare: {str(e)}")
