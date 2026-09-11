@@ -147,11 +147,8 @@ if st.button("🚀 Procesează și Creează Lecția", type="primary"):
                         st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
                         st.stop()
 
-                    # 3. Creare Lecție în WordPress (Tutor LMS / Custom Post Type)
+                    # 3. Creare Lecție / Postare în WordPress
                     iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
-                    
-                    # Încercăm publicarea ca lecție Tutor LMS (lessons)
-                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/topics"
                     
                     lesson_data = {
                         "title": lesson_title,
@@ -159,31 +156,30 @@ if st.button("🚀 Procesează și Creează Lecția", type="primary"):
                         "status": wp_status
                     }
                     
-                    wp_res = requests.post(
-                        wp_endpoint,
-                        json=lesson_data,
-                        auth=(WP_USERNAME, WP_APP_PASSWORD)
-                    )
-
-                    # Fallback pe Custom Post Type 'lesson'
-                    if wp_res.status_code in [404, 405]:
-                        wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/lesson"
-                        wp_res = requests.post(
-                            wp_endpoint,
+                    # Lista de endpoint-uri posibile (Tutor LMS Lessons -> Custom Post Type -> Standard Posts)
+                    endpoints = [
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/tutor_lessons",
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/tutor/v1/lessons",
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
+                    ]
+                    
+                    wp_res = None
+                    for ep in endpoints:
+                        res_test = requests.post(
+                            ep,
                             json=lesson_data,
                             auth=(WP_USERNAME, WP_APP_PASSWORD)
                         )
+                        if res_test.status_code in [200, 201]:
+                            wp_res = res_test
+                            break
 
-                    if wp_res.status_code in [200, 201]:
+                    if wp_res and wp_res.status_code in [200, 201]:
                         post_link = wp_res.json().get("link")
                         st.success(f"✅ Lecția '{lesson_title}' a fost creată cu succes!")
-                        st.markdown(f"🔗 **Deschide noua lecție:** [{post_link}]({post_link})")
+                        st.markdown(f"🔗 **Vezi conținutul pe WordPress:** [{post_link}]({post_link})")
                     else:
-                        st.warning(f"⚠️ Video încărcat pe Bunny, dar creare lecție WordPress a dat eroare ({wp_res.status_code}): {wp_res.text}")
-
-                    # Curățare fișiere de pe disc
-                    for p in [temp_video_path, output_path, bg_path]:
-                        if p and os.path.exists(p): os.remove(p)
+                        st.warning(f"⚠️ Video încărcat pe Bunny, dar WordPress a dat eroare: {res_test.text if 'res_test' in locals() else 'Rute inaccesibile'}")
 
         except Exception as e:
             st.error(f"❌ A apărut o eroare la procesare: {str(e)}")
