@@ -23,6 +23,12 @@ BUNNY_LIBRARIES = {
     # "Grupa 8E": "742498"
 }
 
+COURSES = {
+    "Clasa a V-a - Matematică": 404,   # Înlocuiește 1234 cu ID-ul real din WordPress
+    "Clasa a VI-a - Matematică": 5678,  # Înlocuiește 5678 cu ID-ul real
+    "Clasa a VII-a - Matematică": 91011
+}
+
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
