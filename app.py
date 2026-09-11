@@ -23,9 +23,6 @@ WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "Inginer@@01"
 
-# ==========================================
-# UTILITARE
-# ==========================================
 def parse_sec(t):
     p = str(t).strip().split(':')
     try:
@@ -75,7 +72,7 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                 else:
                     output_path = "output_processed.mp4"
                     
-                    # Comandă FFmpeg optimizată pentru memorie redusă
+                    # 1. FFmpeg Processing
                     if bg_path:
                         cmd = [
                             'ffmpeg', '-y',
@@ -106,26 +103,30 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                         st.stop()
 
                     # 2. Upload Bunny.net
-                                       # Pasul A: Creare Video
-                    create_url = f"https://video.bunnycdn.com/library/{library_id}/videos"
+                    library_id = BUNNY_LIBRARIES.get(library_name)
+                    
                     headers = {
-                        "AccessKey": BUNNY_API_KEY, # Cheia din API Access a bibliotecii
+                        "AccessKey": BUNNY_API_KEY,
                         "Content-Type": "application/json",
                         "accept": "application/json"
                     }
+
+                    # Încercăm mai întâi pe endpoint-ul Stream direct
+                    create_url = f"https://video.bunnycdn.com/library/{library_id}/videos"
                     res = requests.post(create_url, json={"title": title}, headers=headers)
-                    video_id = res.json().get("guid")
                     
-                    # Pasul B: Upload MP4
+                    # Fallback pe API-ul global dacă e necesar
+                    if res.status_code in [404, 405]:
+                        create_url = f"https://api.bunny.net/videolibrary/{library_id}/videos"
+                        res = requests.post(create_url, json={"title": title}, headers=headers)
+
+                    if res.status_code not in [200, 201]:
+                        st.error(f"❌ Eroare la crearea clipului în Bunny ({res.status_code}): {res.text}")
+                        st.stop()
+
+                    video_id = res.json().get("guid")
                     upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
-                    upload_headers = {
-                        "AccessKey": BUNNY_API_KEY,
-                        "Content-Type": "application/octet-stream"
-                    }
-                    with open(output_path, 'rb') as f:
-                        up_res = requests.put(upload_url, data=f, headers=upload_headers)
-                    # 2. Încarcă fișierul fizic (PUT)
-                    upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
+                    
                     upload_headers = {
                         "AccessKey": BUNNY_API_KEY,
                         "Content-Type": "application/octet-stream"
@@ -150,12 +151,12 @@ if st.button("🚀 Procesează și Publică", type="primary"):
 
                     if wp_res.status_code in [200, 201]:
                         post_link = wp_res.json().get("link")
-                        st.success("✅ Succes complet!")
+                        st.success("✅ Succes complet! Videoclipul a fost urcat pe Bunny și publicat pe WordPress.")
                         st.markdown(f"🔗 **Vezi postarea pe WordPress:** [{post_link}]({post_link})")
                     else:
                         st.warning(f"⚠️ Video încărcat pe Bunny, dar WordPress a dat eroare ({wp_res.status_code}): {wp_res.text}")
 
-                    # Curățare fișiere
+                    # Curățare fișiere locale
                     for p in [temp_video_path, output_path, bg_path]:
                         if p and os.path.exists(p): os.remove(p)
 
