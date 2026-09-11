@@ -28,7 +28,7 @@ BUNNY_LIBRARIES = {
 }
 # Aici pui Capitolele din Cursuri și ID-ul lor real din Tutor LMS
 TOPICS = {
-    "Clasa V -> GRUPA 5A": 512,  # Înlocuiește 512 cu ID-ul real al topicului GRUPA 5A
+    "Clasa V -> GRUPA 5A": 404,  # Înlocuiește 512 cu ID-ul real al topicului GRUPA 5A
     "Clasa V -> GRUPA 5B": 513
 }
 
