@@ -24,7 +24,7 @@ WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "Inginer@@01"
 
 # ==========================================
-# LOGICA APLICAȚIEI
+# UTILITARE
 # ==========================================
 def parse_sec(t):
     p = str(t).strip().split(':')
@@ -75,7 +75,7 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                 else:
                     output_path = "output_processed.mp4"
                     
-                    # 1. FFmpeg
+                    # Comandă FFmpeg optimizată pentru memorie redusă
                     if bg_path:
                         cmd = [
                             'ffmpeg', '-y',
@@ -85,7 +85,8 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                             '-t', str(duration),
                             '-filter_complex', '[1:v][0:v]overlay=(W-w)/2:(H-h)/2[out]',
                             '-map', '[out]', '-map', '0:a?',
-                            '-c:v', 'libx264', '-crf', '23', '-preset', 'fast', '-c:a', 'aac',
+                            '-c:v', 'libx264', '-crf', '28', '-preset', 'ultrafast',
+                            '-threads', '2', '-c:a', 'aac',
                             output_path
                         ]
                     else:
@@ -94,47 +95,52 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                             '-ss', str(start_sec),
                             '-i', temp_video_path,
                             '-t', str(duration),
-                            '-c:v', 'libx264', '-crf', '23', '-preset', 'fast', '-c:a', 'aac',
+                            '-c:v', 'libx264', '-crf', '28', '-preset', 'ultrafast',
+                            '-threads', '2', '-c:a', 'aac',
                             output_path
                         ]
-                    subprocess.run(cmd, check=True)
+                    
+                    res_cmd = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    if res_cmd.returncode != 0:
+                        st.error(f"❌ Eroare FFmpeg: {res_cmd.stderr.decode('utf-8')[-500:]}")
+                        st.stop()
 
-                    # 2. Bunny.net Upload
+                    # 2. Upload Bunny.net
                     library_id = BUNNY_LIBRARIES.get(library_name)
                     create_url = f"https://video.bunny.net/library/{library_id}/videos"
                     headers = {"AccessKey": BUNNY_API_KEY, "Content-Type": "application/json"}
                     
                     res = requests.post(create_url, json={"title": title}, headers=headers)
-                    res_data = res.json()
-                    
                     if res.status_code not in [200, 201]:
                         st.error(f"❌ Eroare la crearea clipului în Bunny ({res.status_code}): {res.text}")
+                        st.stop()
+
+                    video_id = res.json().get("guid")
+                    upload_url = f"https://video.bunny.net/library/{library_id}/videos/{video_id}"
+                    
+                    with open(output_path, 'rb') as f:
+                        up_res = requests.put(upload_url, data=f, headers={"AccessKey": BUNNY_API_KEY})
+
+                    if up_res.status_code != 200:
+                        st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
+                        st.stop()
+
+                    # 3. Publicare WordPress
+                    iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
+                    
+                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
+                    wp_res = requests.post(
+                        wp_endpoint,
+                        json={"title": title, "content": iframe_code, "status": wp_status},
+                        auth=(WP_USERNAME, WP_APP_PASSWORD)
+                    )
+
+                    if wp_res.status_code in [200, 201]:
+                        post_link = wp_res.json().get("link")
+                        st.success("✅ Succes complet!")
+                        st.markdown(f"🔗 **Vezi postarea pe WordPress:** [{post_link}]({post_link})")
                     else:
-                        video_id = res_data.get("guid")
-                        upload_url = f"https://video.bunny.net/library/{library_id}/videos/{video_id}"
-                        
-                        with open(output_path, 'rb') as f:
-                            up_res = requests.put(upload_url, data=f, headers={"AccessKey": BUNNY_API_KEY})
-
-                        if up_res.status_code != 200:
-                            st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
-                        else:
-                            # 3. Publicare WordPress
-                            iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
-                            
-                            wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
-                            wp_res = requests.post(
-                                wp_endpoint,
-                                json={"title": title, "content": iframe_code, "status": wp_status},
-                                auth=(WP_USERNAME, WP_APP_PASSWORD)
-                            )
-
-                            if wp_res.status_code in [200, 201]:
-                                post_link = wp_res.json().get("link")
-                                st.success("✅ Succes complet!")
-                                st.markdown(f"🔗 **Vezi postarea pe WordPress:** [{post_link}]({post_link})")
-                            else:
-                                st.warning(f"⚠️ Video încărcat pe Bunny, dar WordPress a dat eroare ({wp_res.status_code}): {wp_res.text}")
+                        st.warning(f"⚠️ Video încărcat pe Bunny, dar WordPress a dat eroare ({wp_res.status_code}): {wp_res.text}")
 
                     # Curățare fișiere
                     for p in [temp_video_path, output_path, bg_path]:
