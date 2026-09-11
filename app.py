@@ -157,7 +157,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                         st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
                         st.stop()
 
-           # 3. Creare Lecție Nativă prin API-ul Personalizat Tutor LMS
+          # 3. Creare Lecție Nativă prin API-ul Personalizat Tutor LMS
                     iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
                     
                     topic_id = TOPICS.get(selected_topic_name)  # ID-ul capitolului GRUPA 5A
@@ -170,7 +170,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                         "status": wp_status
                     }
 
-                    # Apelăm endpoint-ul custom creat în WPCode
+                    # Apelăm endpoint-ul custom din WPCode
                     custom_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/custom/v1/create-lesson"
                     
                     wp_res = requests.post(
@@ -182,7 +182,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                     if wp_res.status_code in [200, 201] and wp_res.json().get("success"):
                         res_data = wp_res.json()
                         post_link = res_data.get("link")
-                        st.success(f"✅ Lecția '{lesson_title}' a fost creată cu succes!")
+                        st.success(f"✅ Lecția '{lesson_title}' a fost adăugată cu succes în meniul cursului!")
                         st.markdown(f"🔗 **Deschide noua lecție în Curs:** [{post_link}]({post_link})")
                     else:
                         st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Tutor LMS a dat eroare ({wp_res.status_code}): {wp_res.text}")
