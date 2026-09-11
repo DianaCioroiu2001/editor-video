@@ -27,7 +27,7 @@ WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
 
-# ==========================================
+==========================================
 # LOGICA APLICAȚIEI
 # ==========================================
 def parse_sec(t):
@@ -46,15 +46,17 @@ st.title("🎓 Publisher Automat Lecții Curs")
 video_file = st.file_uploader("1. Încarcă Videoclipul Lecției", type=["mp4", "mov", "avi"])
 bg_image = st.file_uploader("2. Imagine Fundal (Opțional)", type=["jpg", "png", "jpeg"])
 
-lesson_title = st.text_input("3. Numele Lecției (ex: Lecția nr.2 - Fractii)", value="Lecția Nouă")
-library_name = st.selectbox("4. Selectează Biblioteca Bunny", list(BUNNY_LIBRARIES.keys()))
+lesson_title = st.text_input("3. Numele Lecției", value="Lecția nr.2 - Recapitulare")
+course_id = st.text_input("4. ID Curs WordPress (ex: ID-ul pentru Clasa a V-a)", value="1234")
+
+library_name = st.selectbox("5. Selectează Biblioteca Bunny", list(BUNNY_LIBRARIES.keys()))
 
 start_time = st.text_input("Timp Început (ex: 00:02)", value="00:00")
 end_time = st.text_input("Timp Sfârșit (ex: 01:00)", value="01:00")
 
 wp_status = st.radio("Status Lecție WordPress", ["publish", "draft"], horizontal=True)
 
-if st.button("🚀 Procesează și Creează Lecția", type="primary"):
+if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
     if not video_file:
         st.error("❌ Te rugăm să încarci un fișier video!")
     elif not lesson_title:
@@ -82,7 +84,6 @@ if st.button("🚀 Procesează și Creează Lecția", type="primary"):
                     output_path = "output_processed.mp4"
                     
                     # 1. FFmpeg Processing
-                    # 1. FFmpeg Processing (Fără pătrat negru / potrivire automată de rezoluție)
                     if bg_path:
                         cmd = [
                             'ffmpeg', '-y',
@@ -147,39 +148,47 @@ if st.button("🚀 Procesează și Creează Lecția", type="primary"):
                         st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
                         st.stop()
 
-                    # 3. Creare Lecție / Postare în WordPress
+                    # 3. Legare și Creare Lecție în Cursul Specific (Tutor LMS)
                     iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
                     
-                    lesson_data = {
+                    lesson_payload = {
                         "title": lesson_title,
                         "content": iframe_code,
-                        "status": wp_status
+                        "status": wp_status,
+                        "post_parent": int(course_id) if course_id.isdigit() else 0,
+                        "meta": {
+                            "_tutor_course_id": int(course_id) if course_id.isdigit() else 0
+                        }
                     }
                     
-                    # Lista de endpoint-uri posibile (Tutor LMS Lessons -> Custom Post Type -> Standard Posts)
-                    endpoints = [
-                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/tutor_lessons",
-                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/tutor/v1/lessons",
-                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
-                    ]
-                    
-                    wp_res = None
-                    for ep in endpoints:
-                        res_test = requests.post(
-                            ep,
-                            json=lesson_data,
+                    # Trimitem cererea pe rutele speciale de Tutor LMS
+                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/tutor_lessons"
+                    wp_res = requests.post(
+                        wp_endpoint,
+                        json=lesson_payload,
+                        auth=(WP_USERNAME, WP_APP_PASSWORD)
+                    )
+
+                    if wp_res.status_code not in [200, 201]:
+                        # Încercăm ruta de post_type 'topics' sau 'lesson'
+                        wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
+                        lesson_payload["post_type"] = "topics"
+                        wp_res = requests.post(
+                            wp_endpoint,
+                            json=lesson_payload,
                             auth=(WP_USERNAME, WP_APP_PASSWORD)
                         )
-                        if res_test.status_code in [200, 201]:
-                            wp_res = res_test
-                            break
 
-                    if wp_res and wp_res.status_code in [200, 201]:
+                    if wp_res.status_code in [200, 201]:
                         post_link = wp_res.json().get("link")
-                        st.success(f"✅ Lecția '{lesson_title}' a fost creată cu succes!")
-                        st.markdown(f"🔗 **Vezi conținutul pe WordPress:** [{post_link}]({post_link})")
+                        st.success(f"✅ Lecția '{lesson_title}' a fost adăugată cu succes în Curs!")
+                        st.markdown(f"🔗 **Vezi conținutul:** [{post_link}]({post_link})")
                     else:
-                        st.warning(f"⚠️ Video încărcat pe Bunny, dar WordPress a dat eroare: {res_test.text if 'res_test' in locals() else 'Rute inaccesibile'}")
+                        st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Cursul WordPress a dat eroare ({wp_res.status_code}): {wp_res.text}")
+
+                    # Curățare fișiere de pe disc
+                    for p in [temp_video_path, output_path, bg_path]:
+                        if p and os.path.exists(p): os.remove(p)
 
         except Exception as e:
             st.error(f"❌ A apărut o eroare la procesare: {str(e)}")
