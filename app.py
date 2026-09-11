@@ -6,7 +6,7 @@ import requests
 BUNNY_API_KEY="f2ad32f2-ba5b-4e31-ae46-51782e8536d59644de27-9601-4147-b209-1c53c7259464"
 
 BUNNY_LIBRARIES = {
-    "Grupa 5A": "742487",
+    "Grupa 5A": "f4bf6266-4c1e-4904-bc517e5bfffd-4cbd-4220",
     "Grupa 6A": "742488",
     "Grupa 6B": "742489",
     "Grupa 7A": "742490",
