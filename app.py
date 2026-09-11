@@ -32,7 +32,7 @@ TOPICS = {
     "Clasa V -> GRUPA 5B": 513
 }
 
-course_id = 404
+COURSE_ID = 404
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
