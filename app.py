@@ -26,7 +26,32 @@ BUNNY_LIBRARIES = {
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
+import streamlit as st
+import os
+import subprocess
+import requests
 
+# ==========================================
+# CONFIGURARE BUNNY & WORDPRESS / TUTOR LMS
+# ==========================================
+BUNNY_LIBRARIES = {
+    "Grupa 5A": {
+        "id": "123456",
+        "api_key": "CHEIA_API_PENTRU_GRUPA_5A"
+    },
+    "Shorts & Reels": {
+        "id": "654321",
+        "api_key": "CHEIA_API_PENTRU_SHORTS"
+    }
+}
+
+WORDPRESS_URL = "https://www.levelup-dela0la10.ro"
+WP_USERNAME = "nume_utilizator_admin"
+WP_APP_PASSWORD = "xxxx xxxx xxxx xxxx"  # Parola de aplicație de 24 caractere
+
+# ==========================================
+# LOGICA APLICAȚIEI
+# ==========================================
 def parse_sec(t):
     p = str(t).strip().split(':')
     try:
@@ -37,23 +62,25 @@ def parse_sec(t):
         return 0
     return 0
 
-st.set_page_config(page_title="Auto Video Publisher", page_icon="🎬")
-st.title("🎬 Editor & Publicator Video Automat")
+st.set_page_config(page_title="Auto Lesson Publisher", page_icon="🎓")
+st.title("🎓 Publisher Automat Lecții Curs")
 
-video_file = st.file_uploader("1. Încarcă Videoclipul", type=["mp4", "mov", "avi"])
+video_file = st.file_uploader("1. Încarcă Videoclipul Lecției", type=["mp4", "mov", "avi"])
 bg_image = st.file_uploader("2. Imagine Fundal (Opțional)", type=["jpg", "png", "jpeg"])
 
-title = st.text_input("Titlu Video / Postare", value="Videoclip Nou")
-library_name = st.selectbox("3. Selectează Biblioteca Bunny", list(BUNNY_LIBRARIES.keys()))
+lesson_title = st.text_input("3. Numele Lecției (ex: Lecția nr.2 - Fractii)", value="Lecția Nouă")
+library_name = st.selectbox("4. Selectează Biblioteca Bunny", list(BUNNY_LIBRARIES.keys()))
 
-start_time = st.text_input("Timp Început (ex: 01:15 sau 75)", value="00:00")
-end_time = st.text_input("Timp Sfârșit (ex: 02:30 sau 150)", value="01:00")
+start_time = st.text_input("Timp Început (ex: 00:02)", value="00:00")
+end_time = st.text_input("Timp Sfârșit (ex: 01:00)", value="01:00")
 
-wp_status = st.radio("Status WordPress", ["publish", "draft"], horizontal=True)
+wp_status = st.radio("Status Lecție WordPress", ["publish", "draft"], horizontal=True)
 
-if st.button("🚀 Procesează și Publică", type="primary"):
+if st.button("🚀 Procesează și Creează Lecția", type="primary"):
     if not video_file:
         st.error("❌ Te rugăm să încarci un fișier video!")
+    elif not lesson_title:
+        st.error("❌ Te rugăm să introduci numele lecției!")
     else:
         try:
             with st.spinner("⏳ Se procesează videoclipul în cloud..."):
@@ -110,29 +137,25 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                         st.error(f"❌ Eroare FFmpeg: {res_cmd.stderr.decode('utf-8')[-500:]}")
                         st.stop()
 
-                   # 2. Upload Bunny.net
-                   # 2. Upload Bunny.net
-                    selected_lib = BUNNY_LIBRARIES.get(library_name)
-                    library_id = selected_lib["id"]
-                    library_api_key = selected_lib["api_key"]
-                    
+                    # 2. Upload Bunny.net
+                    lib_info = BUNNY_LIBRARIES.get(library_name)
+                    library_id = lib_info["id"]
+                    library_api_key = lib_info["api_key"]
+
                     headers = {
                         "AccessKey": library_api_key,
                         "Content-Type": "application/json",
                         "accept": "application/json"
                     }
 
-                    # Pasul A: Creare Video pe CDN
                     create_url = f"https://video.bunnycdn.com/library/{library_id}/videos"
-                    res = requests.post(create_url, json={"title": title}, headers=headers)
+                    res = requests.post(create_url, json={"title": lesson_title}, headers=headers)
 
                     if res.status_code not in [200, 201]:
                         st.error(f"❌ Eroare la crearea clipului în Bunny ({res.status_code}): {res.text}")
                         st.stop()
 
                     video_id = res.json().get("guid")
-                    
-                    # Pasul B: Încarcă fișierul MP4
                     upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
                     upload_headers = {
                         "AccessKey": library_api_key,
@@ -145,24 +168,42 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                     if up_res.status_code != 200:
                         st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
                         st.stop()
-                    # 3. Publicare WordPress
+
+                    # 3. Creare Lecție în WordPress (Tutor LMS / Custom Post Type)
                     iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
                     
-                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
+                    # Încercăm publicarea ca lecție Tutor LMS (lessons)
+                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/topics"
+                    
+                    lesson_data = {
+                        "title": lesson_title,
+                        "content": iframe_code,
+                        "status": wp_status
+                    }
+                    
                     wp_res = requests.post(
                         wp_endpoint,
-                        json={"title": title, "content": iframe_code, "status": wp_status},
+                        json=lesson_data,
                         auth=(WP_USERNAME, WP_APP_PASSWORD)
                     )
 
+                    # Fallback pe Custom Post Type 'lesson'
+                    if wp_res.status_code in [404, 405]:
+                        wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/lesson"
+                        wp_res = requests.post(
+                            wp_endpoint,
+                            json=lesson_data,
+                            auth=(WP_USERNAME, WP_APP_PASSWORD)
+                        )
+
                     if wp_res.status_code in [200, 201]:
                         post_link = wp_res.json().get("link")
-                        st.success("✅ Succes complet! Videoclipul a fost urcat pe Bunny și publicat pe WordPress.")
-                        st.markdown(f"🔗 **Vezi postarea pe WordPress:** [{post_link}]({post_link})")
+                        st.success(f"✅ Lecția '{lesson_title}' a fost creată cu succes!")
+                        st.markdown(f"🔗 **Deschide noua lecție:** [{post_link}]({post_link})")
                     else:
-                        st.warning(f"⚠️ Video încărcat pe Bunny, dar WordPress a dat eroare ({wp_res.status_code}): {wp_res.text}")
+                        st.warning(f"⚠️ Video încărcat pe Bunny, dar creare lecție WordPress a dat eroare ({wp_res.status_code}): {wp_res.text}")
 
-                    # Curățare fișiere locale
+                    # Curățare fișiere de pe disc
                     for p in [temp_video_path, output_path, bg_path]:
                         if p and os.path.exists(p): os.remove(p)
 
