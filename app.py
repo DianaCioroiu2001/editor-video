@@ -109,27 +109,27 @@ if st.button("🚀 Procesează și Publică", type="primary"):
                     library_id = BUNNY_LIBRARIES.get(library_name)
                     create_url = f"https://dash.bunny.net/stream/{library_id}/library/overview"
                     headers = {
-    "AccessKey": BUNNY_API_KEY,
-    "Content-Type": "application/json",
-    "accept": "application/json"
-}
+                        "AccessKey": BUNNY_API_KEY,
+                        "Content-Type": "application/json",
+                        "accept": "application/json"
+                    }
 
-res = requests.post(create_url, json={"title": title}, headers=headers)
-if res.status_code not in [200, 201]:
-    st.error(f"❌ Eroare la crearea clipului în Bunny ({res.status_code}): {res.text}")
-    st.stop()
-
-video_id = res.json().get("guid")
-
-# 2. Încarcă fișierul fizic (PUT)
-upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
-upload_headers = {
-    "AccessKey": BUNNY_API_KEY,
-    "Content-Type": "application/octet-stream"
-}
-
-with open(output_path, 'rb') as f:
-    up_res = requests.put(upload_url, data=f, headers=upload_headers)
+                    res = requests.post(create_url, json={"title": title}, headers=headers)
+                    if res.status_code not in [200, 201]:
+                        st.error(f"❌ Eroare la crearea clipului în Bunny ({res.status_code}): {res.text}")
+                        st.stop()
+                    
+                    video_id = res.json().get("guid")
+                    
+                    # 2. Încarcă fișierul fizic (PUT)
+                    upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
+                    upload_headers = {
+                        "AccessKey": BUNNY_API_KEY,
+                        "Content-Type": "application/octet-stream"
+                    }
+                    
+                    with open(output_path, 'rb') as f:
+                        up_res = requests.put(upload_url, data=f, headers=upload_headers)
 
                     if up_res.status_code != 200:
                         st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
