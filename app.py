@@ -71,28 +71,21 @@ target_config = COURSES[selected_option]
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
-st.set_page_config(
-    page_title="Procesare Video & Automatizare Tutor LMS",
-    page_icon="🎬",
-    layout="centered"
-)
-
-st.title("🎬 Editare Video & Inserare în Curs")
-st.write("Încarcă videoclipul, specifică intervalele de tăiat și creează automat lecția în Tutor LMS.")
-
 # ==========================================
 # FORMULAR INTRARE
 # ==========================================
 uploaded_file = st.file_uploader("Alege fișierul video (MP4, MOV, AVI)", type=["mp4", "mov", "avi"])
 
-selected_group = st.selectbox("Alege Grupa / Library-ul Bunny.net", list(BUNNY_LIBRARIES.keys()))
+selected_group_bunny = st.selectbox("Alege Librăria Bunny.net", list(BUNNY_LIBRARIES.keys()))
+
+selected_course_option = st.selectbox("Alege Cursul și Grupa din WordPress", list(COURSES.keys()))
+target_config = COURSES[selected_course_option]
 
 lesson_title = st.text_input("Titlu Lecție", placeholder="Ex: Lecția nr. 2 - Recapitulare și Exerciții")
 
 st.markdown("---")
 st.subheader("✂️ Configurare Tăiere & Trimming Video")
 
-# Tăiere Început / Sfârșit
 col_trim1, col_trim2 = st.columns(2)
 with col_trim1:
     cut_start_sec = st.number_input("Tunde de la ÎNCEPUT (secunde)", min_value=0, value=0, step=1)
@@ -213,8 +206,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
     elif not lesson_title.strip():
         st.error("Te rugăm să introduci titlul lecției!")
     else:
-        # Preluare credențiale specifice grupei alese
-        library_info = BUNNY_LIBRARIES[selected_group]
+        library_info = BUNNY_LIBRARIES[selected_group_bunny]
         library_id = library_info["id"]
         bunny_api_key = library_info["api_key"]
 
@@ -236,13 +228,12 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                     st.stop()
 
                 # 2. Upload Video pe Bunny Stream
-                st.spinner(f"2/3 Se încarcă video-ul în librăria Bunny.net ({selected_group})...")
+                st.spinner(f"2/3 Se încarcă video-ul în librăria Bunny.net ({selected_group_bunny})...")
                 headers_bunny = {
                     "AccessKey": bunny_api_key,
                     "Content-Type": "application/json"
                 }
 
-                # a. Creare ID Video pe Bunny
                 create_url = f"https://video.bunnycdn.com/library/{library_id}/videos"
                 create_res = requests.post(create_url, json={"title": lesson_title}, headers=headers_bunny)
                 
@@ -252,7 +243,6 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
 
                 video_id = create_res.json()["guid"]
 
-                # b. Upload fișier video procesat
                 upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
                 with open(output_video_path, "rb") as video_file:
                     upload_res = requests.put(
@@ -272,7 +262,8 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                 lesson_payload = {
                     "title": lesson_title,
                     "content": iframe_code,
-                    "course_id": COURSE_ID,
+                    "course_id": target_config["course_id"],
+                    "topic_name": target_config["topic_name"],
                     "status": wp_status
                 }
 
