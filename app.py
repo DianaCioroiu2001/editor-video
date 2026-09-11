@@ -32,8 +32,7 @@ COURSES = {
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
-
-#==========================================
+# ==========================================
 # LOGICA APLICAȚIEI
 # ==========================================
 def parse_sec(t):
@@ -53,8 +52,8 @@ video_file = st.file_uploader("1. Încarcă Videoclipul Lecției", type=["mp4", 
 bg_image = st.file_uploader("2. Imagine Fundal (Opțional)", type=["jpg", "png", "jpeg"])
 
 lesson_title = st.text_input("3. Numele Lecției", value="Lecția nr.2 - Recapitulare")
-course_id = st.text_input("4. ID Curs WordPress (ex: ID-ul pentru Clasa a V-a)", value="1234")
 
+selected_course_name = st.selectbox("4. Selectează Cursul / Clasa", list(COURSES.keys()))
 library_name = st.selectbox("5. Selectează Biblioteca Bunny", list(BUNNY_LIBRARIES.keys()))
 
 start_time = st.text_input("Timp Început (ex: 00:02)", value="00:00")
@@ -89,7 +88,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                 else:
                     output_path = "output_processed.mp4"
                     
-                    # 1. FFmpeg Processing
+                    # 1. FFmpeg Processing (Fără pătrat negru / potrivire perfectă pe fundal)
                     if bg_path:
                         cmd = [
                             'ffmpeg', '-y',
@@ -157,17 +156,19 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                     # 3. Legare și Creare Lecție în Cursul Specific (Tutor LMS)
                     iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
                     
+                    course_id = COURSES.get(selected_course_name)
+
                     lesson_payload = {
                         "title": lesson_title,
                         "content": iframe_code,
                         "status": wp_status,
-                        "post_parent": int(course_id) if course_id.isdigit() else 0,
+                        "post_parent": course_id,
                         "meta": {
-                            "_tutor_course_id": int(course_id) if course_id.isdigit() else 0
+                            "_tutor_course_id": course_id
                         }
                     }
                     
-                    # Trimitem cererea pe rutele speciale de Tutor LMS
+                    # Postare în Tutor LMS
                     wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/tutor_lessons"
                     wp_res = requests.post(
                         wp_endpoint,
@@ -176,7 +177,6 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                     )
 
                     if wp_res.status_code not in [200, 201]:
-                        # Încercăm ruta de post_type 'topics' sau 'lesson'
                         wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
                         lesson_payload["post_type"] = "topics"
                         wp_res = requests.post(
@@ -187,7 +187,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
 
                     if wp_res.status_code in [200, 201]:
                         post_link = wp_res.json().get("link")
-                        st.success(f"✅ Lecția '{lesson_title}' a fost adăugată cu succes în Curs!")
+                        st.success(f"✅ Lecția '{lesson_title}' a fost adăugată cu succes în {selected_course_name}!")
                         st.markdown(f"🔗 **Vezi conținutul:** [{post_link}]({post_link})")
                     else:
                         st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Cursul WordPress a dat eroare ({wp_res.status_code}): {wp_res.text}")
