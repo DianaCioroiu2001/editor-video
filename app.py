@@ -162,36 +162,52 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                     
                     topic_id = TOPICS.get(selected_topic_name)
 
+                    # Payload optimizat pentru Tutor LMS
                     lesson_payload = {
                         "title": lesson_title,
                         "content": iframe_code,
                         "status": wp_status,
+                        "topic_id": topic_id,
                         "post_parent": topic_id,
+                        "course_id": COURSE_ID,
                         "menu_order": 2,
                         "meta": {
                             "_tutor_course_id": COURSE_ID
                         }
                     }
 
-                    # Publicăm direct pe Custom Post Type-ul 'lesson'
-                    wp_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/lesson"
-                    
-                    wp_res = requests.post(
-                        wp_endpoint,
-                        json=lesson_payload,
-                        auth=(WP_USERNAME, WP_APP_PASSWORD)
-                    )
+                    # Încercăm rutele specifice Tutor LMS & WordPress
+                    endpoints = [
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/tutor/v1/lessons",
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/tutor/v2/lessons",
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts?post_type=topics",
+                        f"{WORDPRESS_URL.rstrip('/')}/wp-json/wp/v2/posts"
+                    ]
 
-                    if wp_res.status_code in [200, 201]:
-                        post_link = wp_res.json().get("link")
-                        st.success(f"✅ Lecția '{lesson_title}' a fost creată cu succes în Player-ul Cursului!")
-                        st.markdown(f"🔗 **Vezi noua lecție:** [{post_link}]({post_link})")
+                    wp_res = None
+                    last_err = ""
+
+                    for ep in endpoints:
+                        try:
+                            res_test = requests.post(
+                                ep,
+                                json=lesson_payload,
+                                auth=(WP_USERNAME, WP_APP_PASSWORD)
+                            )
+                            if res_test.status_code in [200, 201]:
+                                wp_res = res_test
+                                break
+                            else:
+                                last_err = f"{res_test.status_code}: {res_test.text}"
+                        except Exception as req_e:
+                            last_err = str(req_e)
+
+                    if wp_res and wp_res.status_code in [200, 201]:
+                        post_link = wp_res.json().get("link", f"{WORDPRESS_URL}/courses/matematica-clasa-v/")
+                        st.success(f"✅ Lecția '{lesson_title}' a fost adăugată cu succes în Curs!")
+                        st.markdown(f"🔗 **Deschide noua lecție în Curs:** [{post_link}]({post_link})")
                     else:
-                        st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Tutor LMS a dat eroare ({wp_res.status_code}): {wp_res.text}")
-
-                    # Curățare fișiere
-                    for p in [temp_video_path, output_path, bg_path]:
-                        if p and os.path.exists(p): os.remove(p)
+                        st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Tutor LMS a dat eroare ({last_err})")
 
         except Exception as e:
             st.error(f"❌ A apărut o eroare la procesare: {str(e)}")
