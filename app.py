@@ -36,159 +36,227 @@ COURSE_ID = 404
 WORDPRESS_URL = "https://www.levelup-dela0la10.ro/"
 WP_USERNAME = "levelup"
 WP_APP_PASSWORD = "qHWT At8z apjV 4Rsl AbHc 9fTZ"
+st.set_page_config(
+    page_title="Procesare Video & Automatizare Tutor LMS",
+    page_icon="🎬",
+    layout="centered"
+)
+
+st.title("🎬 Editare Video & Inserare în Curs")
+st.write("Încarcă videoclipul, specifică intervalele de tăiat și creează automat lecția în Tutor LMS.")
+
 # ==========================================
-# LOGICA APLICAȚIEI
+# FORMULAR INTRARE
 # ==========================================
-def parse_sec(t):
-    p = str(t).strip().split(':')
+uploaded_file = st.file_uploader("Alege fișierul video (MP4, MOV, AVI)", type=["mp4", "mov", "avi"])
+
+lesson_title = st.text_input("Titlu Lecție", placeholder="Ex: Lecția nr. 2 - Recapitulare și Exerciții")
+
+st.markdown("---")
+st.subheader("✂️ Configurare Tăiere & Trimming Video")
+
+# Tăiere Început / Sfârșit
+col_trim1, col_trim2 = st.columns(2)
+with col_trim1:
+    cut_start_sec = st.number_input("Tunde de la ÎNCEPUT (secunde)", min_value=0, value=0, step=1)
+with col_trim2:
+    cut_end_sec = st.number_input("Tunde de la SFÂRȘIT (secunde)", min_value=0, value=0, step=1)
+
+st.markdown("##### 🔕 Șterge intervale intermediare din interiorul video-ului")
+st.caption("Introdu intervale în format `MM:SS - MM:SS` sau `SS - SS` (Ex: `01:15 - 02:00, 10:30 - 11:00`)")
+
+cut_intervals_input = st.text_input(
+    "Intervale de șters (separate prin virgulă)",
+    placeholder="01:15 - 02:00, 05:30 - 06:10"
+)
+
+wp_status = st.selectbox("Status Lecție în WordPress", ["publish", "draft"], index=0)
+
+# ==========================================
+# FUNCȚII AUXILIARE PENTRU TIMP ȘI FFmpeg
+# ==========================================
+def parse_time_to_seconds(time_str):
+    """Convertește HH:MM:SS sau MM:SS sau SS în secunde."""
+    time_str = time_str.strip()
+    parts = time_str.split(":")
     try:
-        if len(p) == 1: return float(p[0])
-        if len(p) == 2: return float(p[0])*60 + float(p[1])
-        if len(p) == 3: return float(p[0])*3600 + float(p[1])*60 + float(p[2])
-    except Exception:
-        return 0
-    return 0
+        if len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
+        elif len(parts) == 2:
+            return int(parts[0]) * 60 + float(parts[1])
+        elif len(parts) == 1:
+            return float(parts[0])
+    except ValueError:
+        return None
+    return None
 
-st.set_page_config(page_title="Auto Lesson Publisher", page_icon="🎓")
-st.title("🎓 Publisher Automat Lecții Curs")
+def get_video_duration(file_path):
+    """Prelucrează durata totală a videoclipului folosind ffprobe."""
+    cmd = [
+        "ffprobe", "-v", "error", "-show_entries",
+        "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", file_path
+    ]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    return float(result.stdout.strip())
 
-video_file = st.file_uploader("1. Încarcă Videoclipul Lecției", type=["mp4", "mov", "avi"])
-bg_image = st.file_uploader("2. Imagine Fundal (Opțional)", type=["jpg", "png", "jpeg"])
+def parse_intervals(intervals_str, total_duration, start_cut, end_cut):
+    """
+    Calculează intervalele de PĂSTRAT (keep intervals) pe baza celor de șters.
+    """
+    cuts = []
+    
+    # Adăugăm tăierea de început dacă există
+    if start_cut > 0:
+        cuts.append((0, start_cut))
+        
+    # Adăugăm tăierea de sfârșit dacă există
+    if end_cut > 0 and (total_duration - end_cut) > start_cut:
+        cuts.append((total_duration - end_cut, total_duration))
 
-lesson_title = st.text_input("3. Numele Lecției", value="Lecția nr.2 - Recapitulare")
+    # Parse intervale intermediare
+    if intervals_str.strip():
+        raw_parts = intervals_str.split(",")
+        for part in raw_parts:
+            if "-" in part:
+                s_str, e_str = part.split("-", 1)
+                s_sec = parse_time_to_seconds(s_str)
+                e_sec = parse_time_to_seconds(e_str)
+                if s_sec is not None and e_sec is not None and s_sec < e_sec:
+                    cuts.append((s_sec, e_sec))
 
-selected_topic_name = st.selectbox("4. Selectează Capitolul din Curs", list(TOPICS.keys()))
-library_name = st.selectbox("5. Selectează Biblioteca Bunny", list(BUNNY_LIBRARIES.keys()))
+    # Sortează și unește tăierile suprapuse
+    cuts.sort(key=lambda x: x[0])
+    merged_cuts = []
+    for c in cuts:
+        if not merged_cuts:
+            merged_cuts.append(c)
+        else:
+            prev_start, prev_end = merged_cuts[-1]
+            if c[0] <= prev_end:
+                merged_cuts[-1] = (prev_start, max(prev_end, c[1]))
+            else:
+                merged_cuts.append(c)
 
-start_time = st.text_input("Timp Început (ex: 00:02)", value="00:00")
-end_time = st.text_input("Timp Sfârșit (ex: 01:00)", value="01:00")
+    # Calculăm bucățile de PĂSTRAT
+    keep = []
+    current_pos = 0.0
+    for cut_s, cut_e in merged_cuts:
+        if cut_s > current_pos:
+            keep.append((current_pos, cut_s))
+        current_pos = max(current_pos, cut_e)
+    
+    if current_pos < total_duration:
+        keep.append((current_pos, total_duration))
 
-wp_status = st.radio("Status Lecție WordPress", ["publish", "draft"], horizontal=True)
+    return keep
 
+def process_video_ffmpeg(input_path, output_path, keep_intervals):
+    """Ghenerează comanda FFmpeg selectfilter/concat pentru a păstra doar bucățile valide."""
+    if len(keep_intervals) == 1 and keep_intervals[0][0] == 0:
+        # Nu e nimic de tăiat, procesare directă
+        cmd = ["ffmpeg", "-y", "-i", input_path, "-c", "copy", output_path]
+        subprocess.run(cmd, check=True)
+        return
+
+    filter_complex = ""
+    concat_inputs = ""
+    
+    for idx, (start, end) in enumerate(keep_intervals):
+        filter_complex += f"[0:v]trim=start={start}:end={end},setpts=PTS-STARTPTS[v{idx}]; "
+        filter_complex += f"[0:a]atrim=start={start}:end={end},asetpts=PTS-STARTPTS[a{idx}]; "
+        concat_inputs += f"[v{idx}][a{idx}]"
+    
+    filter_complex += f"{concat_inputs}concat=n={len(keep_intervals)}:v=1:a=1[outv][outa]"
+    
+    cmd = [
+        "ffmpeg", "-y", "-i", input_path,
+        "-filter_complex", filter_complex,
+        "-map", "[outv]", "-map", "[outa]",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "22",
+        "-c:a", "aac", "-b:a", "128k",
+        output_path
+    ]
+    
+    subprocess.run(cmd, check=True)
+
+# ==========================================
+# EXECUTARE PROCES
+# ==========================================
 if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
-    if not video_file:
-        st.error("❌ Te rugăm să încarci un fișier video!")
-    elif not lesson_title:
-        st.error("❌ Te rugăm să introduci numele lecției!")
+    if not uploaded_file:
+        st.error("Te rugăm să încarci un fișier video!")
+    elif not lesson_title.strip():
+        st.error("Te rugăm să introduci titlul lecției!")
     else:
-        try:
-            with st.spinner("⏳ Se procesează videoclipul în cloud..."):
-                temp_video_path = "temp_input.mp4"
-                with open(temp_video_path, "wb") as f:
-                    f.write(video_file.getbuffer())
+        with st.spinner("1/3 Se procesează și se taie videoclipul conform intervalelor..."):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                input_video_path = os.path.join(temp_dir, "input_video.mp4")
+                output_video_path = os.path.join(temp_dir, "output_processed.mp4")
+
+                with open(input_video_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+
+                total_duration = get_video_duration(input_video_path)
+                keep_intervals = parse_intervals(cut_intervals_input, total_duration, cut_start_sec, cut_end_sec)
+
+                try:
+                    process_video_ffmpeg(input_video_path, output_video_path, keep_intervals)
+                except Exception as e:
+                    st.error(f"Eroare la procesarea FFmpeg: {e}")
+                    st.stop()
+
+                # 2. Upload Video pe Bunny Stream
+                st.spinner("2/3 Se încarcă video-ul pe Bunny.net...")
+                headers_bunny = {
+                    "AccessKey": BUNNY_STREAM_API_KEY,
+                    "Content-Type": "application/json"
+                }
+
+                # a. Creare ID Video pe Bunny
+                create_url = f"https://video.bunnycdn.com/library/{LIBRARY_ID}/videos"
+                create_res = requests.post(create_url, json={"title": lesson_title}, headers=headers_bunny)
                 
-                bg_path = None
-                if bg_image:
-                    bg_path = "temp_bg.png"
-                    with open(bg_path, "wb") as f:
-                        f.write(bg_image.getbuffer())
+                if create_res.status_code not in [200, 201]:
+                    st.error(f"Eroare Bunny CDN la creare video: {create_res.text}")
+                    st.stop()
 
-                start_sec = parse_sec(start_time)
-                end_sec = parse_sec(end_time)
-                duration = end_sec - start_sec
+                video_id = create_res.json()["guid"]
 
-                if duration <= 0:
-                    st.error("❌ Timpul de sfârșit trebuie să fie mai mare decât timpul de început!")
-                else:
-                    output_path = "output_processed.mp4"
-                    
-                    # 1. FFmpeg Processing
-                    if bg_path:
-                        cmd = [
-                            'ffmpeg', '-y',
-                            '-ss', str(start_sec),
-                            '-i', temp_video_path,
-                            '-i', bg_path,
-                            '-t', str(duration),
-                            '-filter_complex', 
-                            '[1:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2[bg];'
-                            '[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080[fg];'
-                            '[bg][fg]overlay=0:0[out]',
-                            '-map', '[out]', '-map', '0:a?',
-                            '-c:v', 'libx264', '-crf', '28', '-preset', 'ultrafast',
-                            '-threads', '2', '-c:a', 'aac',
-                            output_path
-                        ]
-                    else:
-                        cmd = [
-                            'ffmpeg', '-y',
-                            '-ss', str(start_sec),
-                            '-i', temp_video_path,
-                            '-t', str(duration),
-                            '-c:v', 'libx264', '-crf', '28', '-preset', 'ultrafast',
-                            '-threads', '2', '-c:a', 'aac',
-                            output_path
-                        ]
-                    
-                    res_cmd = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    if res_cmd.returncode != 0:
-                        st.error(f"❌ Eroare FFmpeg: {res_cmd.stderr.decode('utf-8')[-500:]}")
-                        st.stop()
-
-                    # 2. Upload Bunny.net
-                    lib_info = BUNNY_LIBRARIES.get(library_name)
-                    library_id = lib_info["id"]
-                    library_api_key = lib_info["api_key"]
-
-                    headers = {
-                        "AccessKey": library_api_key,
-                        "Content-Type": "application/json",
-                        "accept": "application/json"
-                    }
-
-                    create_url = f"https://video.bunnycdn.com/library/{library_id}/videos"
-                    res = requests.post(create_url, json={"title": lesson_title}, headers=headers)
-
-                    if res.status_code not in [200, 201]:
-                        st.error(f"❌ Eroare la crearea clipului în Bunny ({res.status_code}): {res.text}")
-                        st.stop()
-
-                    video_id = res.json().get("guid")
-                    upload_url = f"https://video.bunnycdn.com/library/{library_id}/videos/{video_id}"
-                    upload_headers = {
-                        "AccessKey": library_api_key,
-                        "Content-Type": "application/octet-stream"
-                    }
-                    
-                    with open(output_path, 'rb') as f:
-                        up_res = requests.put(upload_url, data=f, headers=upload_headers)
-
-                    if up_res.status_code != 200:
-                        st.error(f"❌ Eroare la încărcarea fișierului pe Bunny ({up_res.status_code}): {up_res.text}")
-                        st.stop()
-
-          # 3. Creare Lecție Nativă prin API-ul Personalizat Tutor LMS
-                    iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{library_id}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
-                    
-                    topic_id = TOPICS.get(selected_topic_name)  # ID-ul capitolului GRUPA 5A
-
-                    lesson_payload = {
-                        "title": lesson_title,
-                        "content": iframe_code,
-                        "topic_id": topic_id,
-                        "course_id": COURSE_ID,
-                        "status": wp_status
-                    }
-
-                    # Apelăm endpoint-ul custom din WPCode
-                    custom_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/custom/v1/create-lesson"
-                    
-                    wp_res = requests.post(
-                        custom_endpoint,
-                        json=lesson_payload,
-                        auth=(WP_USERNAME, WP_APP_PASSWORD)
+                # b. Upload fișier video procesat
+                upload_url = f"https://video.bunnycdn.com/library/{LIBRARY_ID}/videos/{video_id}"
+                with open(output_video_path, "rb") as video_file:
+                    upload_res = requests.put(
+                        upload_url,
+                        data=video_file,
+                        headers={"AccessKey": BUNNY_STREAM_API_KEY, "Content-Type": "application/octet-stream"}
                     )
 
-                    if wp_res.status_code in [200, 201] and wp_res.json().get("success"):
-                        res_data = wp_res.json()
-                        post_link = res_data.get("link")
-                        st.success(f"✅ Lecția '{lesson_title}' a fost adăugată cu succes în meniul cursului!")
-                        st.markdown(f"🔗 **Deschide noua lecție în Curs:** [{post_link}]({post_link})")
-                    else:
-                        st.warning(f"⚠️ Video încărcat pe Bunny, dar asocierea cu Tutor LMS a dat eroare ({wp_res.status_code}): {wp_res.text}")
-# Curățare fișiere
-                    for p in [temp_video_path, output_path, bg_path]:
-                        if p and os.path.exists(p): os.remove(p)
+                if upload_res.status_code not in [200, 201]:
+                    st.error(f"Eroare Bunny CDN la upload fișier: {upload_res.text}")
+                    st.stop()
 
-        except Exception as e:
-            st.error(f"❌ A apărut o eroare la procesare: {str(e)}")
+                # 3. Creare Lecție în WordPress prin API-ul Custom
+                st.spinner("3/3 Se creează lecția în Tutor LMS...")
+                iframe_code = f'<div style="position:relative;padding-top:56.25%;"><iframe src="https://iframe.mediadelivery.net/embed/{LIBRARY_ID}/{video_id}?autoplay=false" loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" allowfullscreen="true"></iframe></div>'
+
+                lesson_payload = {
+                    "title": lesson_title,
+                    "content": iframe_code,
+                    "course_id": COURSE_ID,
+                    "status": wp_status
+                }
+
+                custom_endpoint = f"{WORDPRESS_URL.rstrip('/')}/wp-json/custom/v1/create-lesson"
+                wp_res = requests.post(
+                    custom_endpoint,
+                    json=lesson_payload,
+                    auth=(WP_USERNAME, WP_APP_PASSWORD)
+                )
+
+                if wp_res.status_code in [200, 201] and wp_res.json().get("success"):
+                    res_data = wp_res.json()
+                    post_link = res_data.get("link")
+                    st.success(f"✅ Lecția '{lesson_title}' a fost procesată și adăugată cu succes!")
+                    st.markdown(f"🔗 **Deschide noua lecție în Curs:** [{post_link}]({post_link})")
+                else:
+                    st.error(f"⚠️ Eroare la asocierea cu WordPress ({wp_res.status_code}): {wp_res.text}")
