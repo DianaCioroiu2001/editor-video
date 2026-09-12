@@ -64,6 +64,14 @@ COURSES = {
     "Matematică Clasa VI -> GRUPA 6A": {"course_id": 405, "topic_name": "GRUPA 6A"},
     "Matematică Clasa VI -> GRUPA 6B": {"course_id": 405, "topic_name": "GRUPA 6B"},
     "Matematică Clasa VI -> GRUPA 6C": {"course_id": 405, "topic_name": "GRUPA 6C"},
+    "Matematică Clasa VII -> GRUPA 7A": {"course_id": 406, "topic_name": "GRUPA 7A"},
+    "Matematică Clasa VII -> GRUPA 7B": {"course_id": 406, "topic_name": "GRUPA 7B"},
+    "Matematică Clasa VII -> GRUPA 7C": {"course_id": 406, "topic_name": "GRUPA 7C"},
+    "Matematică Clasa VIII -> GRUPA 8A": {"course_id": 407, "topic_name": "GRUPA 8A"},
+    "Matematică Clasa VIII -> GRUPA 8B": {"course_id": 407, "topic_name": "GRUPA 8B"},
+    "Matematică Clasa VIII -> GRUPA 8C": {"course_id": 407, "topic_name": "GRUPA 8C"},
+    "Matematică Clasa VIII -> GRUPA 8D": {"course_id": 407, "topic_name": "GRUPA 8D"},
+    "Matematică Clasa VIII -> GRUPA 8E": {"course_id": 407, "topic_name": "GRUPA 8E"},
 }
 
 selected_option = st.selectbox("Alege Clasa și Grupa", list(COURSES.keys()))
