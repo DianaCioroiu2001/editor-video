@@ -223,10 +223,9 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                 input_video_path = os.path.join(temp_dir, "input_video.mp4")
                 output_video_path = os.path.join(temp_dir, "output_processed.mp4")
 
-            
-         with open(input_video_path, "wb") as f:
-             while chunk := uploaded_file.read(1024 * 1024):  # Scrie bucăți de 1MB. 
-                f.write(chunk)              
+            with open(input_video_path, "wb") as f:
+                while chunk := uploaded_file.read(1024 * 1024):  # Scrie bucăți de 1MB. 
+                    f.write(chunk)              
 
                 total_duration = get_video_duration(input_video_path)
                 keep_intervals = parse_intervals(cut_intervals_input, total_duration, cut_start_sec, cut_end_sec)
