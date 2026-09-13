@@ -229,7 +229,7 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
 # În loc de o cale hardcodată, generezi o cale temporară validă:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
             tmp_file.write(uploaded_file.read())
-                input_video_path = tmp_file.name           
+            input_video_path = tmp_file.name           
 
                 total_duration = get_video_duration(input_video_path)
                 keep_intervals = parse_intervals(cut_intervals_input, total_duration, cut_start_sec, cut_end_sec)
