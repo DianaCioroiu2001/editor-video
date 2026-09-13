@@ -195,32 +195,54 @@ def parse_intervals(intervals_str, total_duration, start_cut, end_cut):
     return keep
 
 def process_video_ffmpeg(input_path, output_path, keep_intervals):
+    # Dacă nu avem de tăiat nimic sau doar 1 interval întreg, copiem direct
     if len(keep_intervals) == 1 and keep_intervals[0][0] == 0:
         cmd = ["ffmpeg", "-y", "-i", input_path, "-c", "copy", output_path]
         subprocess.run(cmd, check=True)
         return
 
-    filter_complex = ""
-    concat_inputs = ""
+    # Pentru tăiere fără re-encodare (consun minim de RAM și viteză maximă)
+    # Tăiem fiecare bucată de păstrat folosind stream copy (-c copy)
+    temp_files = []
+    temp_dir = os.path.dirname(input_path)
     
-    for idx, (start, end) in enumerate(keep_intervals):
-        filter_complex += f"[0:v]trim=start={start}:end={end},setpts=PTS-STARTPTS[v{idx}]; "
-        filter_complex += f"[0:a]atrim=start={start}:end={end},asetpts=PTS-STARTPTS[a{idx}]; "
-        concat_inputs += f"[v{idx}][a{idx}]"
-    
-    filter_complex += f"{concat_inputs}concat=n={len(keep_intervals)}:v=1:a=1[outv][outa]"
-    
-    cmd = [
-        "ffmpeg", "-y", "-i", input_path,
-        "-filter_complex", filter_complex,
-        "-map", "[outv]", "-map", "[outa]",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "22",
-        "-c:a", "aac", "-b:a", "128k",
-        output_path
-    ]
-    
-    subprocess.run(cmd, check=True)
+    try:
+        for idx, (start, end) in enumerate(keep_intervals):
+            segment_path = os.path.join(temp_dir, f"segment_{idx}.mp4")
+            cmd_segment = [
+                "ffmpeg", "-y",
+                "-ss", str(start),
+                "-to", str(end),
+                "-i", input_path,
+                "-c", "copy",
+                "-avoid_negative_ts", "make_zero",
+                segment_path
+            ]
+            subprocess.run(cmd_segment, check=True)
+            temp_files.append(segment_path)
 
+        # Creăm lista de fișiere pentru concatenare
+        concat_list_path = os.path.join(temp_dir, "concat_list.txt")
+        with open(concat_list_path, "w") as f:
+            for tf in temp_files:
+                f.write(f"file '{tf}'\n")
+
+        # Lipim bucățile înapoi într-un singur video final
+        cmd_concat = [
+            "ffmpeg", "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", concat_list_path,
+            "-c", "copy",
+            output_path
+        ]
+        subprocess.run(cmd_concat, check=True)
+
+    finally:
+        # Curățăm fișierele temporare
+        for tf in temp_files:
+            if os.path.exists(tf):
+                os.remove(tf)
 # ==========================================
 # EXECUTARE PROCES
 # ==========================================
