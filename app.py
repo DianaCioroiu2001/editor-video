@@ -241,6 +241,8 @@ def process_video_ffmpeg(input_path, output_path, keep_intervals):
         for tf in temp_files:
             if os.path.exists(tf):
                 os.remove(tf)
+    if os.path.exists(input_video_path):
+        os.remove(input_video_path)
 # ==========================================
 # EXECUTARE PROCES
 # ==========================================
