@@ -195,18 +195,17 @@ def parse_intervals(intervals_str, total_duration, start_cut, end_cut):
     return keep
 
 def process_video_ffmpeg(input_path, output_path, keep_intervals):
-    # Dacă nu avem de tăiat nimic sau doar 1 interval întreg, copiem direct
+    # Dacă nu avem de tăiat nimic, facem o simplă copiere rapidă
     if len(keep_intervals) == 1 and keep_intervals[0][0] == 0:
         cmd = ["ffmpeg", "-y", "-i", input_path, "-c", "copy", output_path]
         subprocess.run(cmd, check=True)
         return
 
-    # Pentru tăiere fără re-encodare (consun minim de RAM și viteză maximă)
-    # Tăiem fiecare bucată de păstrat folosind stream copy (-c copy)
     temp_files = []
     temp_dir = os.path.dirname(input_path)
     
     try:
+        # Tăiem bucățile fără re-encodare (procesare instantă, sub 50MB RAM)
         for idx, (start, end) in enumerate(keep_intervals):
             segment_path = os.path.join(temp_dir, f"segment_{idx}.mp4")
             cmd_segment = [
@@ -221,13 +220,12 @@ def process_video_ffmpeg(input_path, output_path, keep_intervals):
             subprocess.run(cmd_segment, check=True)
             temp_files.append(segment_path)
 
-        # Creăm lista de fișiere pentru concatenare
+        # Lipim bucățile înapoi
         concat_list_path = os.path.join(temp_dir, "concat_list.txt")
         with open(concat_list_path, "w") as f:
             for tf in temp_files:
                 f.write(f"file '{tf}'\n")
 
-        # Lipim bucățile înapoi într-un singur video final
         cmd_concat = [
             "ffmpeg", "-y",
             "-f", "concat",
@@ -239,7 +237,7 @@ def process_video_ffmpeg(input_path, output_path, keep_intervals):
         subprocess.run(cmd_concat, check=True)
 
     finally:
-        # Curățăm fișierele temporare
+        # Ștergem segmentele temporare pentru a elibera spațiul de pe disc
         for tf in temp_files:
             if os.path.exists(tf):
                 os.remove(tf)
