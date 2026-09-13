@@ -6,8 +6,7 @@ import json
 import re
 import subprocess
 import tempfile
-# Asigură-te că folderul de ieșire există înainte de a rula FFmpeg
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
 
 # Apelul tău FFmpeg existent:
 # subprocess.run(ffmpeg_cmd, check=True, ...)
