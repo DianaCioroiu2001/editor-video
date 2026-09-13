@@ -234,11 +234,11 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
             total_duration = get_video_duration(input_video_path)
             keep_intervals = parse_intervals(cut_intervals_input, total_duration, cut_start_sec, cut_end_sec)
 
-                try:
-                    process_video_ffmpeg(input_video_path, output_video_path, keep_intervals)
-                except Exception as e:
-                    st.error(f"Eroare la procesarea FFmpeg: {e}")
-                    st.stop()
+            try:
+                process_video_ffmpeg(input_video_path, output_video_path, keep_intervals)
+            except Exception as e:
+                st.error(f"Eroare la procesarea FFmpeg: {e}")
+                st.stop()
 
                 # 2. Upload Video pe Bunny Stream
                 st.spinner(f"2/3 Se încarcă video-ul în librăria Bunny.net ({selected_group_bunny})...")
