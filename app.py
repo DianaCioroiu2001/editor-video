@@ -231,8 +231,8 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
             tmp_file.write(uploaded_file.read())
             input_video_path = tmp_file.name           
 
-                total_duration = get_video_duration(input_video_path)
-                keep_intervals = parse_intervals(cut_intervals_input, total_duration, cut_start_sec, cut_end_sec)
+            total_duration = get_video_duration(input_video_path)
+            keep_intervals = parse_intervals(cut_intervals_input, total_duration, cut_start_sec, cut_end_sec)
 
                 try:
                     process_video_ffmpeg(input_video_path, output_video_path, keep_intervals)
