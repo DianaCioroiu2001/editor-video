@@ -5,6 +5,7 @@ import requests
 import json
 import re
 import subprocess
+import tempfile
 # ==========================================
 # CONFIGURARE BUNNY, WORDPRESS & CAPITOLE
 # ==========================================
@@ -223,9 +224,12 @@ if st.button("🚀 Procesează și Adaugă în Curs", type="primary"):
                 input_video_path = os.path.join(temp_dir, "input_video.mp4")
                 output_video_path = os.path.join(temp_dir, "output_processed.mp4")
 
-        with open(input_video_path, "wb") as f:
-            while chunk := uploaded_file.read(1024 * 1024):  # Scrie bucăți de 1MB. 
-                f.write(chunk)              
+       
+
+# În loc de o cale hardcodată, generezi o cale temporară validă:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
+            tmp_file.write(uploaded_file.read())
+                input_video_path = tmp_file.name           
 
                 total_duration = get_video_duration(input_video_path)
                 keep_intervals = parse_intervals(cut_intervals_input, total_duration, cut_start_sec, cut_end_sec)
