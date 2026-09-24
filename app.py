@@ -61,6 +61,10 @@ BUNNY_LIBRARIES = {
         "id": "742499",  
         "api_key": "adcb1098-5b02-4e7d-a78b1a06606c-073a-4354"
     },
+    "Grupa 8F": {
+        "id": "759020",  
+        "api_key": "a2e65b48-954f-4b20-8e2997de5c56-44cc-4e19"
+    },
  
 }
 # Aici pui Capitolele din Cursuri și ID-ul lor real din Tutor LMS
@@ -77,6 +81,7 @@ COURSES = {
     "Matematică Clasa VIII -> GRUPA 8C": {"course_id": 407, "topic_name": "GRUPA 8C"},
     "Matematică Clasa VIII -> GRUPA 8D": {"course_id": 407, "topic_name": "GRUPA 8D"},
     "Matematică Clasa VIII -> GRUPA 8E": {"course_id": 407, "topic_name": "GRUPA 8E"},
+    "Matematică Clasa VIII -> GRUPA 8F": {"course_id": 407, "topic_name": "GRUPA 8F"},
 }
 
 selected_option = st.selectbox("Alege Clasa și Grupa", list(COURSES.keys()))
