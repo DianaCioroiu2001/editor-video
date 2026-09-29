@@ -21,6 +21,10 @@ BUNNY_LIBRARIES = {
         "id": "742487",  
         "api_key": "f4bf6266-4c1e-4904-bc517e5bfffd-4cbd-4220"
     },
+     "Grupa 5B": {
+        "id": "764844",  
+        "api_key": "86ab35ee-ea1e-4d73-b693e7e322a6-81be-4e77"
+    },
     "Grupa 6A": {
         "id": "742488",  
         "api_key": "ec4378f9-d23a-402e-a5b35df204e4-2865-4965"
@@ -28,6 +32,10 @@ BUNNY_LIBRARIES = {
     "Grupa 6B": {
         "id": "742489",  
         "api_key": "2b23056d-e56c-40ee-a51578894f2a-7254-4a95"
+    },
+      "Grupa 6C": {
+        "id": "764453",  
+        "api_key": "b47fe369-5873-4439-80989fd0eeaf-21da-40a1"
     },
     "Grupa 7A": {
         "id": "742490",  
@@ -64,6 +72,10 @@ BUNNY_LIBRARIES = {
     "Grupa 8F": {
         "id": "759020",  
         "api_key": "a2e65b48-954f-4b20-8e2997de5c56-44cc-4e19"
+    },
+     "Grupa 10A": {
+        "id": "759021",  
+        "api_key": "e977621c-c2a8-4073-8e500ccd9432-38f9-4ffd"
     },
  
 }
